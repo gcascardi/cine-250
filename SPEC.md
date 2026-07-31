@@ -75,6 +75,7 @@ Cada registro possui:
   "year": 1994,
   "rating": 9.3,
   "poster": "",
+  "duration": "2h 22min",
   "synopsis": ""
 }
 ```
@@ -219,6 +220,7 @@ Mostrar:
 - Título
 - Ano
 - Nota IMDb
+- DuraÃ§Ã£o
 - Sinopse
 - Botão para abrir o IMDb
 
