@@ -11,10 +11,12 @@ function App() {
   const [saveStatus, setSaveStatus] = useState('idle')
   const [saveErrorMessage, setSaveErrorMessage] = useState('')
   const [isDrawing, setIsDrawing] = useState(false)
+  const [drawingPoster, setDrawingPoster] = useState('')
   const drawIntervalRef = useRef(null)
   const drawTimeoutRef = useRef(null)
 
   const selectedMovie = movies.find((movie) => movie.id === selectedMovieId)
+  const displayedPoster = isDrawing ? drawingPoster : selectedMovie?.poster
 
   useEffect(() => {
     async function loadMovies() {
@@ -80,6 +82,7 @@ function App() {
 
     if (movie) {
       setIsDrawing(true)
+      setDrawingPoster(selectedMovie?.poster || '')
       setSaveStatus('idle')
       setSaveErrorMessage('')
 
@@ -197,11 +200,11 @@ function App() {
           >
             <p className="card-label">Filme sorteado</p>
             <div className="movie-layout">
-              {selectedMovie.poster ? (
+              {displayedPoster ? (
                 <img
                   className="movie-poster"
-                  src={selectedMovie.poster}
-                  alt={`Pôster de ${selectedMovie.title}`}
+                  src={displayedPoster}
+                  alt={isDrawing ? 'Pôster desfocado durante o sorteio' : `Pôster de ${selectedMovie.title}`}
                 />
               ) : (
                 <div className="movie-poster movie-poster-placeholder" aria-label="Pôster indisponível">

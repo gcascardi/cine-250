@@ -92,6 +92,11 @@ h1 {
   animation: draw-card-pulse 0.18s ease-in-out infinite alternate;
 }
 
+.movie-card.drawing .movie-poster {
+  filter: blur(10px) brightness(0.65);
+  transform: scale(1.02);
+}
+
 @keyframes draw-button-pulse {
   to {
     opacity: 0.8;
@@ -132,6 +137,7 @@ h1 {
   aspect-ratio: 2 / 3;
   border-radius: 10px;
   object-fit: cover;
+  transition: filter 180ms ease, transform 180ms ease;
 }
 
 .movie-poster-placeholder {
