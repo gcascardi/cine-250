@@ -113,6 +113,50 @@ h1 {
   font-weight: 700;
 }
 
+.people-progress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #3f3f46;
+}
+
+.person-progress {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #3f3f46;
+  border-radius: 10px;
+}
+
+.person-progress legend {
+  padding-inline: 6px;
+  color: #fafafa;
+  font-weight: 700;
+}
+
+.person-progress label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #d4d4d8;
+  cursor: pointer;
+}
+
+.person-progress input {
+  width: 17px;
+  height: 17px;
+  accent-color: #eab308;
+}
+
+.person-progress label:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 @media (max-width: 480px) {
   .app {
     padding-block: 32px;
@@ -120,5 +164,9 @@ h1 {
 
   .movie-card {
     padding: 24px;
+  }
+
+  .people-progress {
+    grid-template-columns: 1fr;
   }
 }

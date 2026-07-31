@@ -6,7 +6,11 @@
     "year": 1994,
     "rating": 9.3,
     "poster": "",
-    "synopsis": ""
+    "synopsis": "",
+    "watched_guilherme": false,
+    "watched_gisele": false,
+    "rewatch_guilherme": false,
+    "rewatch_gisele": false
   },
   {
     "id": 2,
@@ -15,7 +19,11 @@
     "year": 1972,
     "rating": 9.2,
     "poster": "",
-    "synopsis": ""
+    "synopsis": "",
+    "watched_guilherme": false,
+    "watched_gisele": false,
+    "rewatch_guilherme": false,
+    "rewatch_gisele": false
   },
   {
     "id": 3,
@@ -24,6 +32,10 @@
     "year": 2008,
     "rating": 9.0,
     "poster": "",
-    "synopsis": ""
+    "synopsis": "",
+    "watched_guilherme": false,
+    "watched_gisele": false,
+    "rewatch_guilherme": false,
+    "rewatch_gisele": false
   }
 ]

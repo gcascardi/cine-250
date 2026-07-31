@@ -3,8 +3,10 @@ import './App.css'
 
 function App() {
   const [movies, setMovies] = useState([])
-  const [selectedMovie, setSelectedMovie] = useState(null)
+  const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [error, setError] = useState('')
+
+  const selectedMovie = movies.find((movie) => movie.id === selectedMovieId)
 
   useEffect(() => {
     async function loadMovies() {
@@ -27,7 +29,30 @@ function App() {
 
   function drawMovie() {
     const randomIndex = Math.floor(Math.random() * movies.length)
-    setSelectedMovie(movies[randomIndex])
+    setSelectedMovieId(movies[randomIndex].id)
+  }
+
+  function updateProgress(person, field, checked) {
+    const watchedField = `watched_${person}`
+    const rewatchField = `rewatch_${person}`
+
+    setMovies((currentMovies) =>
+      currentMovies.map((movie) => {
+        if (movie.id !== selectedMovieId) {
+          return movie
+        }
+
+        if (field === 'watched') {
+          return {
+            ...movie,
+            [watchedField]: checked,
+            [rewatchField]: checked ? movie[rewatchField] : false,
+          }
+        }
+
+        return { ...movie, [rewatchField]: checked }
+      }),
+    )
   }
 
   return (
@@ -70,6 +95,42 @@ function App() {
                 <dd>{selectedMovie.rating}</dd>
               </div>
             </dl>
+
+            <div className="people-progress">
+              {['guilherme', 'gisele'].map((person) => {
+                const watchedField = `watched_${person}`
+                const rewatchField = `rewatch_${person}`
+
+                return (
+                  <fieldset className="person-progress" key={person}>
+                    <legend>
+                      {person.charAt(0).toUpperCase() + person.slice(1)}
+                    </legend>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selectedMovie[watchedField]}
+                        onChange={(event) =>
+                          updateProgress(person, 'watched', event.target.checked)
+                        }
+                      />
+                      Assistiu
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selectedMovie[rewatchField]}
+                        disabled={!selectedMovie[watchedField]}
+                        onChange={(event) =>
+                          updateProgress(person, 'rewatch', event.target.checked)
+                        }
+                      />
+                      Reassistiria
+                    </label>
+                  </fieldset>
+                )
+              })}
+            </div>
           </article>
         )}
       </section>
