@@ -101,12 +101,44 @@ h1 {
 .progress-item progress { width: 100%; height: 12px; accent-color: #eab308; }
 
 .movie-card {
+  position: relative;
   margin-top: 36px;
   padding: 30px;
   border: 1px solid #3f3f46;
   border-radius: 16px;
   background: #202024;
   text-align: left;
+}
+
+.movie-preview-overlay {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  overflow-y: auto;
+  padding: 28px 20px;
+  background: rgb(9 9 11 / 82%);
+}
+
+.movie-preview-overlay .movie-card {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 55%);
+}
+
+.preview-close {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #52525b;
+  border-radius: 50%;
+  background: #18181b;
+  color: #fafafa;
+  font: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
 }
 
 .movie-card.drawing {
@@ -333,11 +365,30 @@ h1 {
   text-align: left;
 }
 .movie-list th { color: #fafafa; font-size: 0.85rem; white-space: nowrap; }
+.movie-list th:first-child,
+.movie-list td:first-child { width: 1%; padding-inline: 8px; text-align: center; }
+.movie-list th:nth-child(2),
+.movie-list td:nth-child(2) { min-width: 130px; white-space: normal; overflow-wrap: anywhere; }
 .movie-list td:nth-child(1), .movie-list td:nth-child(3), .movie-list td:nth-child(4),
 .movie-list td:nth-child(5), .movie-list td:nth-child(6) { white-space: nowrap; }
 .movie-list tr:last-child td { border-bottom: 0; }
 .movie-list tr.pending td { background: rgb(234 179 8 / 7%); }
 .movie-list input { width: 18px; height: 18px; accent-color: #eab308; }
+.movie-title-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f4f4f5;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: #71717a;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.movie-title-button:hover { color: #facc15; }
+.movie-title-button:focus-visible,
+.preview-close:focus-visible { outline: 2px solid #fef08a; outline-offset: 3px; }
 .save-area { margin-top: 20px; }
 .pending-count { display: inline-block; margin: 0 0 0 14px; color: #a1a1aa; font-size: 0.9rem; }
 
@@ -364,6 +415,12 @@ h1 {
   }
 
   .progress-label { display: grid; gap: 4px; }
+
+  .movie-list th,
+  .movie-list td { padding: 11px 8px; }
+
+  .movie-list th:nth-child(2),
+  .movie-list td:nth-child(2) { min-width: 110px; max-width: 180px; }
 }
 
 @media (max-width: 400px) {

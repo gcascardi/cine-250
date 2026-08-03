@@ -35,6 +35,7 @@ function ProgressBar({ label, watched, total }) {
 function App() {
   const [movies, setMovies] = useState([])
   const [selectedMovieId, setSelectedMovieId] = useState(null)
+  const [isMoviePreviewOpen, setIsMoviePreviewOpen] = useState(false)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle')
@@ -103,8 +104,18 @@ function App() {
     window.clearTimeout(drawTimeoutRef.current)
   }, [])
 
+  useEffect(() => {
+    function closePreviewOnEscape(event) {
+      if (event.key === 'Escape') setIsMoviePreviewOpen(false)
+    }
+
+    window.addEventListener('keydown', closePreviewOnEscape)
+    return () => window.removeEventListener('keydown', closePreviewOnEscape)
+  }, [])
+
   function drawMovie() {
     if (isDrawing || movies.length === 0) return
+    setIsMoviePreviewOpen(false)
     const movie = weightedRandom(movies)
 
     if (movie) {
@@ -221,8 +232,20 @@ function App() {
         )}
 
         {selectedMovie && (
+          <div
+            className={isMoviePreviewOpen ? 'movie-preview-overlay' : ''}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsMoviePreviewOpen(false)
+            }}
+          >
           <article className={`movie-card${isDrawing ? ' drawing' : ''}`}
+            role={isMoviePreviewOpen ? 'dialog' : undefined}
+            aria-modal={isMoviePreviewOpen ? 'true' : undefined}
             aria-live={isDrawing ? 'off' : 'polite'} aria-busy={isDrawing}>
+            {isMoviePreviewOpen && (
+              <button className="preview-close" type="button"
+                onClick={() => setIsMoviePreviewOpen(false)} aria-label="Fechar card">×</button>
+            )}
             <p className="card-label">Filme sorteado</p>
             <div className="movie-layout">
               {displayedPoster ? (
@@ -269,6 +292,7 @@ function App() {
               </div>
             </div>
           </article>
+          </div>
         )}
 
         {movies.length > 0 && (
@@ -278,12 +302,16 @@ function App() {
               <table>
                 <thead><tr>
                   <th scope="col">Posição</th><th scope="col">Título</th><th scope="col">Ano</th>
-                  <th scope="col">Nota IMDb</th><th scope="col">Guilherme assistiu</th><th scope="col">Gisele assistiu</th>
+                  <th scope="col">Nota</th><th scope="col">Guilherme</th><th scope="col">Gisele</th>
                 </tr></thead>
                 <tbody>
                   {movies.map((movie, index) => (
                     <tr key={movie.id} className={dirtyMovieIds.has(movie.id) ? 'pending' : ''}>
-                      <td>{index + 1}</td><td>{movie.title}</td><td>{movie.year}</td><td>{movie.rating}</td>
+                      <td>{index + 1}</td><td><button className="movie-title-button" type="button"
+                        onClick={() => {
+                          setSelectedMovieId(movie.id)
+                          setIsMoviePreviewOpen(true)
+                        }}>{movie.title}</button></td><td>{movie.year}</td><td>{movie.rating}</td>
                       {people.map((person) => (
                         <td key={person}><input type="checkbox"
                           aria-label={`${movie.title}: ${person} assistiu`}
