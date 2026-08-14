@@ -1,9 +1,53 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { supabase } from './services/supabase.js'
 import { weightedRandom } from './utils/weightedRandom.js'
 
 const people = ['guilherme', 'gisele']
+
+function getMovieGenres(movie) {
+  const genres = movie.genres ?? movie.genre ?? []
+  if (Array.isArray(genres)) return genres
+  return String(genres).split(',').map((genre) => genre.trim()).filter(Boolean)
+}
+
+function getLocalDateSeed() {
+  const today = new Date()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${today.getFullYear()}-${month}-${day}`
+}
+
+function getDailyMovie(movies) {
+  if (movies.length === 0) return null
+
+  let hash = 0
+  for (const character of getLocalDateSeed()) {
+    hash = ((hash * 31) + character.charCodeAt(0)) >>> 0
+  }
+  return movies[hash % movies.length]
+}
+
+function FilterGroup({ title, options, selected, onToggle, onSelectAll, onClearAll }) {
+  return (
+    <fieldset className="filter-group">
+      <legend>{title}</legend>
+      <div className="filter-actions">
+        <button type="button" onClick={onSelectAll}>Marcar todos</button>
+        <button type="button" onClick={onClearAll}>Desmarcar todos</button>
+      </div>
+      <div className="filter-options">
+        {options.map((option) => (
+          <label key={option}>
+            <input type="checkbox" checked={selected.has(option)}
+              onChange={() => onToggle(option)} />
+            {option}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
 
 function getProgress(movie) {
   return {
@@ -40,16 +84,34 @@ function App() {
   const [progressError, setProgressError] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle')
   const [saveErrorMessage, setSaveErrorMessage] = useState('')
+  const [cardSaveStatus, setCardSaveStatus] = useState('idle')
+  const [cardSaveError, setCardSaveError] = useState('')
   const [savedCount, setSavedCount] = useState(0)
   const [dirtyMovieIds, setDirtyMovieIds] = useState(() => new Set())
   const [isDrawing, setIsDrawing] = useState(false)
   const [drawingPoster, setDrawingPoster] = useState('')
+  const [selectedDecades, setSelectedDecades] = useState(() => new Set())
+  const [selectedGenres, setSelectedGenres] = useState(() => new Set())
   const drawIntervalRef = useRef(null)
   const drawTimeoutRef = useRef(null)
   const savedProgressRef = useRef(new Map())
 
   const selectedMovie = movies.find((movie) => movie.id === selectedMovieId)
   const selectedMoviePosition = movies.findIndex((movie) => movie.id === selectedMovieId) + 1
+  const decades = useMemo(() => [...new Set(movies.map(
+    (movie) => Math.floor(movie.year / 10) * 10,
+  ))].sort((a, b) => a - b), [movies])
+  const genres = useMemo(() => [...new Set(movies.flatMap(getMovieGenres))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR')), [movies])
+  const eligibleMovies = useMemo(() => movies.filter((movie) => {
+    const decade = Math.floor(movie.year / 10) * 10
+    const hasEnabledGenre = getMovieGenres(movie).some((genre) => selectedGenres.has(genre))
+    return selectedDecades.has(decade) && hasEnabledGenre
+  }), [movies, selectedDecades, selectedGenres])
+  const dailyMovie = useMemo(() => getDailyMovie(movies), [movies])
+  const dailyMoviePosition = dailyMovie
+    ? movies.findIndex((movie) => movie.id === dailyMovie.id) + 1
+    : 0
   const displayedPoster = isDrawing ? drawingPoster : selectedMovie?.poster
   const totalMovies = movies.length
   const watchedGuilherme = movies.filter((movie) => movie.watched_guilherme).length
@@ -89,6 +151,10 @@ function App() {
         savedProgressRef.current = new Map(
           mergedMovies.map((movie) => [movie.id, getProgress(movie)]),
         )
+        setSelectedDecades(new Set(mergedMovies.map(
+          (movie) => Math.floor(movie.year / 10) * 10,
+        )))
+        setSelectedGenres(new Set(mergedMovies.flatMap(getMovieGenres)))
         setMovies(mergedMovies)
       } catch (loadError) {
         console.error('[Cine250] Erro completo no carregamento', loadError)
@@ -114,15 +180,17 @@ function App() {
   }, [])
 
   function drawMovie() {
-    if (isDrawing || movies.length === 0) return
+    if (isDrawing || eligibleMovies.length === 0) return
     setIsMoviePreviewOpen(false)
-    const movie = weightedRandom(movies)
+    const movie = weightedRandom(eligibleMovies)
 
     if (movie) {
       setIsDrawing(true)
       setDrawingPoster(selectedMovie?.poster || '')
       drawIntervalRef.current = window.setInterval(() => {
-        setSelectedMovieId(movies[Math.floor(Math.random() * movies.length)].id)
+        setSelectedMovieId(
+          eligibleMovies[Math.floor(Math.random() * eligibleMovies.length)].id,
+        )
       }, 90)
       drawTimeoutRef.current = window.setTimeout(() => {
         window.clearInterval(drawIntervalRef.current)
@@ -137,6 +205,8 @@ function App() {
     const rewatchField = `rewatch_${person}`
     setSaveStatus('idle')
     setSaveErrorMessage('')
+    setCardSaveStatus('idle')
+    setCardSaveError('')
 
     setMovies((currentMovies) => {
       let updatedMovie
@@ -164,6 +234,46 @@ function App() {
       })
       return updatedMovies
     })
+  }
+
+  function toggleFilter(setter, option) {
+    setter((current) => {
+      const next = new Set(current)
+      if (next.has(option)) next.delete(option)
+      else next.add(option)
+      return next
+    })
+  }
+
+  async function saveCurrentMovie() {
+    if (!selectedMovie) return
+    setCardSaveStatus('saving')
+    setCardSaveError('')
+
+    const payload = {
+      movie_id: selectedMovie.id,
+      ...getProgress(selectedMovie),
+      updated_at: new Date().toISOString(),
+    }
+
+    try {
+      const { error: saveError } = await supabase
+        .from('movie_progress')
+        .upsert(payload, { onConflict: 'movie_id' })
+
+      if (saveError) throw saveError
+
+      savedProgressRef.current.set(selectedMovie.id, getProgress(selectedMovie))
+      setDirtyMovieIds((currentIds) => {
+        const nextIds = new Set(currentIds)
+        nextIds.delete(selectedMovie.id)
+        return nextIds
+      })
+      setCardSaveStatus('success')
+    } catch (saveError) {
+      setCardSaveError(saveError.message)
+      setCardSaveStatus('error')
+    }
   }
 
   async function saveProgress() {
@@ -214,14 +324,56 @@ function App() {
           <p className="subtitle">Deixe a escolha da sessão de hoje por nossa conta.</p>
         </header>
 
-        <button className="draw-button" type="button" onClick={drawMovie}
-          disabled={movies.length === 0 || isDrawing} aria-busy={isDrawing}>
-          {isDrawing ? 'Sorteando...' : 'Sortear filme'}
-        </button>
-
         {error && <p className="message error">{error}</p>}
         {progressError && <p className="message error">{progressError}</p>}
         {!error && movies.length === 0 && <p className="message">Carregando filmes...</p>}
+
+        {dailyMovie && (
+          <section className="daily-movie" aria-labelledby="daily-movie-title">
+            {dailyMovie.poster ? (
+              <img src={dailyMovie.poster} alt={`Pôster de ${dailyMovie.title}`} />
+            ) : (
+              <div className="daily-poster-placeholder">Pôster indisponível</div>
+            )}
+            <div>
+              <p className="eyebrow">Filme do dia</p>
+              <h2 id="daily-movie-title">{dailyMovie.title}</h2>
+              <p>#{dailyMoviePosition} • {dailyMovie.year} • Nota {dailyMovie.rating}</p>
+              <button type="button" onClick={() => {
+                setSelectedMovieId(dailyMovie.id)
+                setIsMoviePreviewOpen(false)
+              }}>Selecionar no card principal</button>
+            </div>
+          </section>
+        )}
+
+        {movies.length > 0 && (
+          <section className="draw-filters" aria-labelledby="draw-filters-title">
+            <div className="filters-heading">
+              <h2 id="draw-filters-title">Filtros do sorteio</h2>
+              <p>{eligibleMovies.length} de {movies.length} filmes disponíveis para sorteio</p>
+            </div>
+            <div className="filter-grid">
+              <FilterGroup title="Décadas" options={decades} selected={selectedDecades}
+                onToggle={(decade) => toggleFilter(setSelectedDecades, decade)}
+                onSelectAll={() => setSelectedDecades(new Set(decades))}
+                onClearAll={() => setSelectedDecades(new Set())} />
+              <FilterGroup title="Gêneros" options={genres} selected={selectedGenres}
+                onToggle={(genre) => toggleFilter(setSelectedGenres, genre)}
+                onSelectAll={() => setSelectedGenres(new Set(genres))}
+                onClearAll={() => setSelectedGenres(new Set())} />
+            </div>
+          </section>
+        )}
+
+        <button className="draw-button" type="button" onClick={drawMovie}
+          disabled={movies.length === 0 || eligibleMovies.length === 0 || isDrawing}
+          aria-busy={isDrawing}>
+          {isDrawing ? 'Sorteando...' : 'Sortear filme'}
+        </button>
+        {movies.length > 0 && eligibleMovies.length === 0 && (
+          <p className="message">Nenhum filme corresponde aos filtros selecionados.</p>
+        )}
 
         {movies.length > 0 && (
           <section className="progress-overview" aria-label="Progresso dos filmes">
@@ -288,6 +440,18 @@ function App() {
                       </fieldset>
                     )
                   })}
+                </div>
+                <div className="card-save-area">
+                  <button className="save-button" type="button" onClick={saveCurrentMovie}
+                    disabled={cardSaveStatus === 'saving'}>
+                    {cardSaveStatus === 'saving' ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  {cardSaveStatus === 'success' && (
+                    <p className="save-message success">Salvo com sucesso</p>
+                  )}
+                  {cardSaveStatus === 'error' && (
+                    <p className="save-message error">{cardSaveError}</p>
+                  )}
                 </div>
               </div>
             </div>

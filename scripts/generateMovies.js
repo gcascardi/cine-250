@@ -5,9 +5,13 @@ import { snapshot } from './moviesSnapshot.js'
 const moviesPath = resolve('public/movies.json')
 const tmdbApiUrl = 'https://api.themoviedb.org/3'
 const tmdbImageUrl = 'https://image.tmdb.org/t/p/w500'
+const fallbackGenres = {
+  tt32136987: ['Animação', 'Fantasia'],
+  tt31433954: ['Biografia', 'Comédia', 'Drama'],
+}
 const requiredFields = [
   'id', 'imdbId', 'title', 'originalTitle', 'year', 'rating',
-  'contentRating', 'poster', 'duration', 'synopsis',
+  'contentRating', 'poster', 'duration', 'synopsis', 'genres',
 ]
 
 function validate(movies) {
@@ -41,6 +45,9 @@ function validate(movies) {
     if (movie.poster && !/^https:\/\//.test(movie.poster)) errors.push(`${label}: poster inválido`)
     if (typeof movie.duration !== 'string' || !movie.duration.trim()) {
       errors.push(`${label}: duration inválida`)
+    }
+    if (!Array.isArray(movie.genres) || movie.genres.length === 0) {
+      errors.push(`${label}: genres deve ser uma lista não vazia`)
     }
 
     imdbIds.add(movie.imdbId)
@@ -126,6 +133,7 @@ async function enrichMovie(movie, token, position) {
     poster: details.poster_path ? `${tmdbImageUrl}${details.poster_path}` : movie.poster,
     duration: formatDuration(details.runtime, movie.duration),
     synopsis: shortSynopsis(details.overview, movie.synopsis),
+    genres: details.genres?.map(({ name }) => name).filter(Boolean) || movie.genres,
   }
 }
 
@@ -148,6 +156,7 @@ const movies = snapshot.split('\n').map((row, index) => {
     synopsis:
       known?.synopsis ||
       `Filme aclamado que acompanha seus personagens em uma história marcante, reconhecida pelo público e presente no IMDb Top 250.`,
+    genres: known?.genres || fallbackGenres[imdbId] || [],
   }
 })
 const token = process.env.TMDB_API_TOKEN
