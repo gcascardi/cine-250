@@ -415,6 +415,28 @@ h1 {
   opacity: 0.55;
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secondary-button {
+  margin-top: 20px;
+  border: 1px solid #52525b;
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: #27272a;
+  color: #f4f4f5;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) { border-color: #eab308; }
+.secondary-button:focus-visible { outline: 3px solid #fef08a; outline-offset: 3px; }
+.secondary-button:disabled { cursor: wait; opacity: 0.55; }
+
 .save-message {
   display: inline-block;
   margin: 20px 0 0 14px;

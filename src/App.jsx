@@ -105,8 +105,10 @@ function App() {
     .sort((a, b) => a.localeCompare(b, 'pt-BR')), [movies])
   const eligibleMovies = useMemo(() => movies.filter((movie) => {
     const decade = Math.floor(movie.year / 10) * 10
-    const hasEnabledGenre = getMovieGenres(movie).some((genre) => selectedGenres.has(genre))
-    return selectedDecades.has(decade) && hasEnabledGenre
+    const movieGenres = getMovieGenres(movie)
+    const hasOnlyEnabledGenres = movieGenres.length > 0
+      && movieGenres.every((genre) => selectedGenres.has(genre))
+    return selectedDecades.has(decade) && hasOnlyEnabledGenres
   }), [movies, selectedDecades, selectedGenres])
   const dailyMovie = useMemo(() => getDailyMovie(movies), [movies])
   const dailyMoviePosition = dailyMovie
@@ -342,7 +344,7 @@ function App() {
               <button type="button" onClick={() => {
                 setSelectedMovieId(dailyMovie.id)
                 setIsMoviePreviewOpen(false)
-              }}>Selecionar no card principal</button>
+              }}>Visualizar</button>
             </div>
           </section>
         )}
@@ -373,14 +375,6 @@ function App() {
         </button>
         {movies.length > 0 && eligibleMovies.length === 0 && (
           <p className="message">Nenhum filme corresponde aos filtros selecionados.</p>
-        )}
-
-        {movies.length > 0 && (
-          <section className="progress-overview" aria-label="Progresso dos filmes">
-            <ProgressBar label="Progresso geral" watched={watchedTogether} total={totalMovies} />
-            <ProgressBar label="Progresso de Guilherme" watched={watchedGuilherme} total={totalMovies} />
-            <ProgressBar label="Progresso de Gisele" watched={watchedGisele} total={totalMovies} />
-          </section>
         )}
 
         {selectedMovie && (
@@ -443,10 +437,16 @@ function App() {
                   })}
                 </div>
                 <div className="card-save-area">
+                  <div className="card-actions">
                   <button className="save-button" type="button" onClick={saveCurrentMovie}
                     disabled={cardSaveStatus === 'saving'}>
                     {cardSaveStatus === 'saving' ? 'Salvando...' : 'Salvar'}
                   </button>
+                  <button className="secondary-button" type="button" onClick={drawMovie}
+                    disabled={isDrawing || eligibleMovies.length === 0}>
+                    {isDrawing ? 'Sorteando...' : 'Sortear outro'}
+                  </button>
+                  </div>
                   {cardSaveStatus === 'success' && (
                     <p className="save-message success">Salvo com sucesso</p>
                   )}
@@ -500,6 +500,14 @@ function App() {
               {saveStatus === 'error' && <p className="save-message error">{saveErrorMessage}</p>}
             </div>
           </details>
+        )}
+
+        {movies.length > 0 && (
+          <section className="progress-overview" aria-label="Progresso dos filmes">
+            <ProgressBar label="Progresso geral" watched={watchedTogether} total={totalMovies} />
+            <ProgressBar label="Progresso de Guilherme" watched={watchedGuilherme} total={totalMovies} />
+            <ProgressBar label="Progresso de Gisele" watched={watchedGisele} total={totalMovies} />
+          </section>
         )}
       </section>
     </main>
