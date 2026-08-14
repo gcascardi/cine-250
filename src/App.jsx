@@ -419,6 +419,7 @@ function App() {
                   <div><dt>Nota IMDb</dt><dd>{selectedMovie.rating}</dd></div>
                   <div><dt>Posição</dt><dd>#{selectedMoviePosition}</dd></div>
                   <div><dt>Duração</dt><dd>{selectedMovie.duration}</dd></div>
+                  <div className="movie-genres"><dt>Gêneros</dt><dd>{getMovieGenres(selectedMovie).join(', ')}</dd></div>
                 </dl>
                 <p className="synopsis">{selectedMovie.synopsis}</p>
                 <a className="imdb-link" href={`https://www.imdb.com/title/${selectedMovie.imdbId}/`}

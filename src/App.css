@@ -329,6 +329,10 @@ h1 {
   gap: 4px;
 }
 
+.movie-details .movie-genres {
+  flex-basis: 100%;
+}
+
 .movie-details dt {
   color: #a1a1aa;
   font-size: 0.82rem;
