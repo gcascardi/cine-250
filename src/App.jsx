@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { supabase } from './services/supabase.js'
+import { loadProgress, upsertProgress } from './services/progressApi.js'
 import { weightedRandom } from './utils/weightedRandom.js'
 
 const people = ['guilherme', 'gisele']
@@ -129,17 +129,16 @@ function App() {
         if (!response.ok) throw new Error('Não foi possível carregar os filmes.')
 
         const movieData = await response.json()
-        const selectResult = await supabase.from('movie_progress').select('*')
-        console.info('[Supabase] Resultado do select', selectResult)
-        const { data: progressData, error: progressLoadError } = selectResult
-
-        if (progressLoadError) {
-          console.error('[Supabase] Erro completo no select', progressLoadError)
+        let progressData = []
+        try {
+          progressData = await loadProgress()
+        } catch (progressLoadError) {
+          console.error('[Google Sheets] Erro completo no carregamento', progressLoadError)
           setProgressError(progressLoadError.message)
         }
 
         const progressByMovieId = new Map(
-          (progressData || []).map((progress) => [progress.movie_id, progress]),
+          progressData.map((progress) => [Number(progress.movie_id), progress]),
         )
         const mergedMovies = movieData.map((movie) => ({
           ...movie,
@@ -259,11 +258,7 @@ function App() {
     }
 
     try {
-      const { error: saveError } = await supabase
-        .from('movie_progress')
-        .upsert(payload, { onConflict: 'movie_id' })
-
-      if (saveError) throw saveError
+      await upsertProgress([payload])
 
       savedProgressRef.current.set(selectedMovie.id, getProgress(selectedMovie))
       setDirtyMovieIds((currentIds) => {
@@ -290,19 +285,10 @@ function App() {
       ...getProgress(movie),
       updated_at: updatedAt,
     }))
-    console.info('[Supabase] Payload do upsert em lote', payload)
+    console.info('[Google Sheets] Payload do upsert em lote', payload)
 
     try {
-      const { error: saveError } = await supabase
-        .from('movie_progress')
-        .upsert(payload, { onConflict: 'movie_id' })
-
-      if (saveError) {
-        console.error('[Supabase] Erro completo no upsert', saveError)
-        setSaveErrorMessage(saveError.message)
-        setSaveStatus('error')
-        return
-      }
+      await upsertProgress(payload)
 
       changedMovies.forEach((movie) => {
         savedProgressRef.current.set(movie.id, getProgress(movie))
