@@ -143,8 +143,15 @@ function upsertRows_(records) {
       throw new Error('movie_id é obrigatório.');
     }
 
-    const row = headers.map(function (header) { return serialize_(record[header]); });
     const existingRow = rowByMovieId.get(String(record.movie_id));
+    const currentRow = existingRow
+      ? sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0]
+      : [];
+    const row = headers.map(function (header, index) {
+      return Object.prototype.hasOwnProperty.call(record, header)
+        ? serialize_(record[header])
+        : (currentRow[index] === undefined ? '' : currentRow[index]);
+    });
 
     if (existingRow) {
       sheet.getRange(existingRow, 1, 1, headers.length).setValues([row]);
