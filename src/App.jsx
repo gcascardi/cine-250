@@ -4,6 +4,30 @@ import { supabase } from './services/supabase.js'
 import { weightedRandom } from './utils/weightedRandom.js'
 
 const people = ['guilherme', 'gisele']
+const watchLaterStorageKey = 'cine250:watch-later'
+
+function readWatchLater() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(watchLaterStorageKey) ?? '[]')
+    if (!Array.isArray(stored) || stored.some((id) => typeof id !== 'string')) {
+      throw new Error('Invalid watch later list')
+    }
+    return { ids: new Set(stored), error: '' }
+  } catch {
+    return { ids: new Set(), error: 'Não foi possível carregar a lista Assistir depois deste navegador.' }
+  }
+}
+
+function WatchLaterButton({ movie, selected, onToggle, disabled = false }) {
+  return (
+    <button className="secondary-button watch-later-button" type="button"
+      aria-pressed={selected} disabled={disabled}
+      aria-label={`${movie.title}: ${selected ? 'Remover de Assistir depois' : 'Assistir depois'}`}
+      onClick={() => onToggle(movie)}>
+      {selected ? 'Remover de Assistir depois' : 'Assistir depois'}
+    </button>
+  )
+}
 
 function getMovieGenres(movie) {
   const genres = movie.genres ?? movie.genre ?? []
@@ -78,6 +102,8 @@ function ProgressBar({ label, watched, total }) {
 
 function App() {
   const [movies, setMovies] = useState([])
+  const [watchLater, setWatchLater] = useState(readWatchLater)
+  const watchLaterMovies = movies.filter((movie) => watchLater.ids.has(movie.imdbId))
   const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [isMoviePreviewOpen, setIsMoviePreviewOpen] = useState(false)
   const [error, setError] = useState('')
@@ -180,6 +206,19 @@ function App() {
     window.addEventListener('keydown', closePreviewOnEscape)
     return () => window.removeEventListener('keydown', closePreviewOnEscape)
   }, [])
+
+  function toggleWatchLater(movie) {
+    const nextIds = new Set(watchLater.ids)
+    if (nextIds.has(movie.imdbId)) nextIds.delete(movie.imdbId)
+    else nextIds.add(movie.imdbId)
+
+    try {
+      window.localStorage.setItem(watchLaterStorageKey, JSON.stringify([...nextIds]))
+      setWatchLater({ ids: nextIds, error: '' })
+    } catch {
+      setWatchLater({ ...watchLater, error: 'Não foi possível salvar a lista neste navegador. Tente novamente.' })
+    }
+  }
 
   function drawMovie() {
     if (isDrawing || eligibleMovies.length === 0) return
@@ -328,6 +367,7 @@ function App() {
 
         {error && <p className="message error">{error}</p>}
         {progressError && <p className="message error">{progressError}</p>}
+        {watchLater.error && <p className="message error" role="alert">{watchLater.error}</p>}
         {!error && movies.length === 0 && <p className="message">Carregando filmes...</p>}
 
         {dailyMovie && (
@@ -345,6 +385,8 @@ function App() {
                 setSelectedMovieId(dailyMovie.id)
                 setIsMoviePreviewOpen(false)
               }}>Visualizar</button>
+              <WatchLaterButton movie={dailyMovie} selected={watchLater.ids.has(dailyMovie.imdbId)}
+                onToggle={toggleWatchLater} />
             </div>
           </section>
         )}
@@ -438,6 +480,8 @@ function App() {
                 </div>
                 <div className="card-save-area">
                   <div className="card-actions">
+                  <WatchLaterButton movie={selectedMovie} selected={watchLater.ids.has(selectedMovie.imdbId)}
+                    onToggle={toggleWatchLater} disabled={isDrawing} />
                   <button className="save-button" type="button" onClick={saveCurrentMovie}
                     disabled={cardSaveStatus === 'saving'}>
                     {cardSaveStatus === 'saving' ? 'Salvando...' : 'Salvar'}
@@ -461,6 +505,32 @@ function App() {
         )}
 
         {movies.length > 0 && (
+          <details className="movie-list watch-later-list" open>
+            <summary>Assistir depois ({watchLaterMovies.length})</summary>
+            <p className="watch-later-note">Lista salva automaticamente neste navegador.</p>
+            {watchLaterMovies.length === 0 ? (
+              <p className="message">Nenhum filme na lista. Use “Assistir depois” para guardar os filmes que quer ver.</p>
+            ) : (
+              <ul className="watch-later-items">
+                {watchLaterMovies.map((movie) => (
+                  <li key={movie.imdbId}>
+                    <div>
+                      <button className="movie-title-button" type="button" disabled={isDrawing}
+                        onClick={() => {
+                          setSelectedMovieId(movie.id)
+                          setIsMoviePreviewOpen(true)
+                        }}>{movie.title}</button>
+                      <p>{movie.year} • Nota IMDb {movie.rating}</p>
+                    </div>
+                    <WatchLaterButton movie={movie} selected onToggle={toggleWatchLater} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
+        )}
+
+        {movies.length > 0 && (
           <details className="movie-list">
             <summary>Todos os filmes</summary>
             <div className="movie-table-wrapper">
@@ -468,6 +538,7 @@ function App() {
                 <thead><tr>
                   <th scope="col">Posição</th><th scope="col">Título</th><th scope="col">Ano</th>
                   <th scope="col">Nota</th><th scope="col">Guilherme</th><th scope="col">Gisele</th>
+                  <th scope="col">Assistir depois</th>
                 </tr></thead>
                 <tbody>
                   {movies.map((movie, index) => (
@@ -484,6 +555,8 @@ function App() {
                           disabled={saveStatus === 'saving'}
                           onChange={(event) => updateProgress(movie.id, person, 'watched', event.target.checked)} /></td>
                       ))}
+                      <td><WatchLaterButton movie={movie} selected={watchLater.ids.has(movie.imdbId)}
+                        onToggle={toggleWatchLater} /></td>
                     </tr>
                   ))}
                 </tbody>

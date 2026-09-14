@@ -1,5 +1,13 @@
 # React + Vite
 
+## Assistir depois
+
+Use “Assistir depois” no filme do dia, no card ou na tabela completa. A seção
+“Assistir depois” permite consultar os títulos, abrir os detalhes e removê-los.
+A lista é salva automaticamente no armazenamento local do navegador pelo ID IMDb,
+persiste ao recarregar a página e não altera o progresso nem os pesos do sorteio.
+Ela não é sincronizada entre dispositivos; limpar os dados do site remove a lista.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
