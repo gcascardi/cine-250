@@ -297,7 +297,7 @@ function App() {
       setSavedCount(changedMovies.length)
       setSaveStatus('success')
     } catch (saveError) {
-      console.error('[Supabase] Exceção completa no upsert', saveError)
+      console.error('[Google Sheets] Exceção completa no upsert', saveError)
       setSaveErrorMessage(saveError.message)
       setSaveStatus('error')
     }
